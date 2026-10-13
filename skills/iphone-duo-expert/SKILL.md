@@ -8,6 +8,10 @@ description: "Desenvolvimento e adaptacao de apps iOS para iPhone Duo foldable. 
 Autoridade tecnica para desenvolvimento de apps voltados ao **iPhone Duo** — primeiro foldable da Apple, anunciado 09/Set/2026, lancamento 23/Out/2026 rodando **iOS 27.1**.
 Incorpora as 6 Tech Talks oficiais Apple (111461 a 111466), Session WWDC26 269 (What is New in SwiftUI) e os padroes do `swiftui-expert-skill`.
 
+Fonte oficial: [Apple — Prepare your app for iPhone Duo](https://developer.apple.com/iphone-duo/prepare/). Conteudo reescrito para conformidade com restricoes de licenciamento.
+
+> Nunca declare um app como "iPhone Duo ready" so com base no scan. O scan pega a maioria dos problemas, nao todos. SEMPRE finalize com o Stage 5 (teste de redimensionamento ao vivo). Todos os apps rodam no iPhone Duo, mas compilar com o SDK iOS 27.1+ e o que permite usar o display inteiro e adaptar entre layouts.
+
 ---
 
 ## Modo de Uso Rapido
@@ -36,17 +40,22 @@ rg "safeAreaInsets\.right\s*\*\s*2" --type swift
 rg "supportedInterfaceOrientations" --type swift
 rg "\.cornerRadius\(\s*1[0-9]\.?[0-9]*" --type swift  # Cantos fixos
 rg "CGSize\(width:\s*3[5-9][0-9]"   --type swift   # Width fixo estilo iPhone
+rg "UIWindow\(frame:"               --type swift   # Window sem windowScene
+rg "userInterfaceIdiom\s*==\s*\.(phone|pad)" --type swift  # Decisao por idiom
+rg "bounds\.height\s*==\s*(844|852|896|926|932|812|667)" --type swift  # Lista de tamanhos conhecidos
+rg "\.scaleAspectFill|contentMode:\s*\.fill" --type swift  # Media full-bleed que corta conteudo
+rg "statusBarOrientation"           --type swift
 ```
 
 Regra de ouro: se encontrar `UIScreen.main` ou `UIDevice.current.orientation`, marque como **P0 (bug garantido)** e substitua no Stage 1.
 
 ### Tabela de Comportamento por SDK (sem rebuild)
 
-| Build com | Comportamento display interno |
-|---|---|
-| SDK antigo (< 27.0) | Roda, mas LETTERBOXED (barras pretas) |
-| iOS 27.0 SDK | Estende esquerda da status bar, evita area da camera |
-| **iOS 27.1 SDK** | **Full edge-to-edge, barras verticais automaticas** |
+| Build com | Comportamento display interno | O que o usuario ve |
+|---|---|---|
+| SDK antigo (iOS 26 ou anterior) | Roda, mas NAO adapta | Aberto: app centralizado com espaco vazio ao redor. Fechado: conteudo a esquerda da status bar e camera |
+| iOS 27.0 SDK | Redimensiona pra preencher a maior parte do display interno | Ainda evita a status bar na borda direita |
+| **iOS 27.1 SDK** | **Full edge-to-edge, barras verticais automaticas** | Toolbars e tab bars aparecem na vertical abaixo da status bar. Antes de enviar um build 27.1, confirme que o conteudo adapta as barras virando verticais |
 
 A primeira acao e SEMPRE confirmar build com **Xcode 27.1** + SDK **iOS 27.1**.
 
@@ -136,6 +145,38 @@ ForEach(items.indices) { i in Text(items[i]) }
 // ✅ DEPOIS — id estavel (sobrevive a drag and drop reorder)
 ForEach(items, id: \.stableId) { item in Text(item.title) }
 ```
+
+### 1.5 Crie Janelas a partir da Scene, nao da Tela
+
+`UIWindow(frame: UIScreen.main.bounds)` casa a janela ao tamanho errado quando o app redimensiona no fold/unfold.
+
+```swift
+// ❌ ANTES (QUEBRA no Duo)
+let window = UIWindow(frame: UIScreen.main.bounds)
+
+// ✅ DEPOIS
+let window = UIWindow(windowScene: windowScene)
+```
+
+Nunca guarde um `UIScreen` em propriedade. Acesse dinamicamente: `view.window?.windowScene?.screen`.
+
+### 1.6 Media Full-Bleed — Corte vs Ajuste
+
+`.scaleAspectFill` / `.aspectRatio(contentMode: .fill)` em imagens hero e video pode cortar conteudo importante nos displays mais largos do Duo.
+
+```swift
+// ❌ ANTES — corta no display largo
+Image("hero").resizable().aspectRatio(contentMode: .fill)
+
+// ✅ DEPOIS — escolhe fill vs fit pela size class / aspect ratio atual
+@Environment(\.horizontalSizeClass) private var hSize
+
+Image("hero")
+    .resizable()
+    .aspectRatio(contentMode: hSize == .regular ? .fit : .fill)
+```
+
+Alternativa: defina um ponto focal para que o recorte preserve a parte importante da imagem. Nao assuma que o recorte "do iPhone" continua valido no display interno.
 
 ---
 
@@ -431,6 +472,14 @@ Execute SEMPRE estas 8 checagens no Xcode 27.1 Device Hub:
 | T7 | Fold parcial 30/60/90/120 graus | Nenhum CTA cai na dobradica; onHingeChange com resposta fluida. |
 | T8 | Barra vertical | Todos itens tem icone; nenhum depende so de texto. |
 
+### Superficies de Teste (o scan sozinho NAO basta)
+
+Alem do simulador iPhone Duo, valide o redimensionamento em:
+
+- **Simulador redimensionavel do iOS** no Device Hub — arraste pra tamanhos extremos nas duas direcoes.
+- **iPhone Mirroring no macOS 27** — redimensione a janela pros extremos e confirme que o layout acompanha.
+- **Simulador iPhone Duo no Xcode 27.1** — a melhor forma de testar a experiencia nativa completa (4 poses + transicoes ao vivo).
+
 ### Como usar o Simulador iPhone Duo
 
 1. Xcode 27.1 -> Window -> Device and Simulators -> Simulators -> + -> iPhone Duo
@@ -465,6 +514,10 @@ Mesmo em UIKit: SEMPRE use `traitCollection` e `view.window?.windowScene?.screen
 6. ✅ Sempre forneca TITULO + SF SYMBOL em itens de toolbar/tab.
 7. ✅ Sempre gire APIs 27.1+ com `#available(iOS 27.1, *)` + fallback.
 8. ✅ Use **size classes**, nao `userInterfaceIdiom == .pad`, para ativar sidebar.
+9. ❌ Nao identifique o dispositivo por lista de tamanhos conhecidos (`bounds.height == 844`) — nao batem no Duo.
+10. ❌ Nao use `UIWindow(frame:)` — crie janelas a partir da `windowScene`.
+11. ⚠️ Media full-bleed (`.scaleAspectFill`/`.fill`) corta conteudo no display largo — escolha fill vs fit por size class/aspect ratio ou defina ponto focal.
+12. ✅ Nunca declare "Duo ready" so pelo scan — finalize sempre com o Stage 5.
 
 ---
 
