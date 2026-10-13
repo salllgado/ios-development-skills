@@ -1,6 +1,6 @@
 # iOS Development Skills
 
-Coleção de skills (instruções estruturadas para agentes de IA) focadas em desenvolvimento iOS com UIKit.
+Coleção de skills (instruções estruturadas para agentes de IA) focadas em desenvolvimento iOS com UIKit e SwiftUI.
 
 Cada skill neste repositório é um pacote auto-contido com procedimento passo-a-passo, templates de código e referências de documentação da Apple. As skills são agnósticas de projeto e funcionam com múltiplas IDEs / agentes de IA.
 
@@ -12,6 +12,7 @@ Cada skill neste repositório é um pacote auto-contido com procedimento passo-a
 |-------|-----------|
 | [uikit-scene-lifecycle-transition](skills/uikit-scene-lifecycle-transition/) | Migra apps UIKit do ciclo de vida baseado em AppDelegate para o ciclo de vida baseado em Scenes (UISceneDelegate / UIWindowSceneDelegate). Obrigatório a partir de iOS 27. |
 | [iphone-duo-expert](skills/iphone-duo-expert/) | Adaptação de apps iOS (SwiftUI + UIKit) para o iPhone Duo foldable. Auditoria obrigatória, NavigationSplitView, APIs foldable iOS 27.1 (ArrangementView, Reserved Regions, onHingeChange, CameraCaptureAccessory), safe areas assimétricas, barras verticais, checklist de 8 testes e formato de resposta auditoria P0/P1/P2. Baseado nas 6 Tech Talks oficiais Apple 111461–111466 e WWDC26 Session 269. |
+| [swiftui-expert](skills/swiftui-expert/) | Autoridade técnica em SwiftUI (iOS + macOS): fluxo de dados com `@State`/`@Observable`, composição de views, performance e diffing, listas e `ForEach`, environment, layout, navegação, animações, acessibilidade, Swift Charts, localização, Liquid Glass e migração de APIs. Inclui referências por tópico e scripts para captura e análise de traces do Instruments. |
 
 ---
 
